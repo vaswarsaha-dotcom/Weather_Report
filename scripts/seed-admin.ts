@@ -1,49 +1,45 @@
-/**
- * Seed or promote an admin user.
- *
- * Usage:
- *   npm run seed:admin -- --email you@company.com --password "Str0ngPass!" --name "You"
- *
- * If a user with that email already exists, it's promoted to admin.
- * Otherwise a new admin account is created with the given credentials.
- */
+// scripts/seed-admin.ts
+// Usage: npm run seed:admin -- --email you@company.com --password "Str0ngPass!1" --name "You"
 import "dotenv/config";
-import { connectDB } from "../lib/db";
-import { User } from "../models/User";
-import { hashPassword } from "../lib/auth";
+import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
 
-function getArg(flag: string): string | undefined {
-  const idx = process.argv.indexOf(flag);
-  return idx !== -1 ? process.argv[idx + 1] : undefined;
+function parseArgs() {
+  const args: Record<string, string> = {};
+  process.argv.slice(2).forEach((arg, i, arr) => { if (arg.startsWith("--")) args[arg.slice(2)] = arr[i + 1]; });
+  return args;
 }
 
 async function main() {
-  const email = getArg("--email");
-  const password = getArg("--password");
-  const name = getArg("--name") ?? "Admin";
-
-  if (!email || !password) {
-    console.error('Usage: npm run seed:admin -- --email you@company.com --password "Str0ngPass!" --name "You"');
+  const { email, password, name } = parseArgs();
+  if (!email || !password || !name) {
+    console.error('Usage: npm run seed:admin -- --email you@company.com --password "Str0ngPass!1" --name "You"');
     process.exit(1);
   }
 
-  await connectDB();
-
-  let user = await User.findOne({ email });
-  if (user) {
-    user.role = "admin";
-    await user.save();
-    console.log(`Promoted existing user ${email} to admin.`);
-  } else {
-    const passwordHash = await hashPassword(password);
-    user = await User.create({ name, email, passwordHash, role: "admin" });
-    console.log(`Created new admin user ${email}.`);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    console.error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env.local");
+    process.exit(1);
   }
 
-  process.exit(0);
+  const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const { data: existing } = await supabase.from("users").select("id, role").eq("email", email.toLowerCase().trim()).maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from("users").update({ role: "admin" }).eq("id", existing.id);
+    if (error) throw error;
+    console.log(`✓ Promoted existing user ${email} to admin.`);
+  } else {
+    const { error } = await supabase.from("users").insert({
+      email: email.toLowerCase().trim(), name, password_hash: passwordHash, role: "admin",
+    });
+    if (error) throw error;
+    console.log(`✓ Created admin account for ${email}.`);
+  }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch((err) => { console.error("Seed failed:", err); process.exit(1); });

@@ -90,7 +90,7 @@ export function Pricing() {
                 </ul>
 
                 <Link href="/signup" className="mt-8">
-                  <Button variant={plan.highlight ? "primary" : "outline"} className="w-full">
+                  <Button variant={plan.highlight ? "primary" : "secondary"} className="w-full">
                     Choose {plan.name}
                   </Button>
                 </Link>

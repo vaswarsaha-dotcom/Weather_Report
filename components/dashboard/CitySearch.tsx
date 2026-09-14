@@ -1,60 +1,63 @@
+// components/dashboard/CitySearch.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, MapPin, Star, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/Input";
 import type { GeoResult } from "@/types/weather";
-import { useGeolocation } from "@/hooks/useGeolocation";
-import { useFavorites } from "@/hooks/useFavorites";
-import { GlassCard } from "@/components/ui/Card";
-import { cn } from "@/lib/cn";
 
-export function CitySearch({
-  onSelect,
-  current
-}: {
-  onSelect: (city: GeoResult) => void;
-  current: GeoResult | null;
-}) {
+interface CitySearchProps {
+  onSelect: (result: GeoResult) => void;
+  onUseLocation?: () => void;
+  locating?: boolean;
+  current?: GeoResult | null;
+}
+
+export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
-  const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
 
-  const { detect, detecting } = useGeolocation();
-  const { favorites, addFavorite, removeFavorite } = useFavorites();
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.trim().length < 2) {
+  const runSearch = useCallback(async (q: string) => {
+    if (!q.trim()) {
       setResults([]);
       return;
     }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const url = new URL("/api/geocode", window.location.origin);
-        url.searchParams.set("q", query);
-        const res = await fetch(url.toString());
-        const data = await res.json();
-        setResults(data.results ?? []);
-      } finally {
-        setSearching(false);
-      }
-    }, 350);
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setResults(data.results || []);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSearch(query), 350);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, runSearch]);
 
-  const isFavorite = current
-    ? favorites.some((f) => f.latitude === current.latitude && f.longitude === current.longitude)
-    : false;
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
   return (
-    <GlassCard className="relative p-4">
-      <div className="flex items-center gap-3">
-        <Search className="h-4 w-4 shrink-0 text-slate" aria-hidden="true" />
+    <div ref={boxRef} className="relative w-full max-w-md">
+      <div className="flex items-center gap-2 bg-ink border border-white/10 rounded-xl px-3.5 py-2.5 focus-within:border-amber transition-colors">
+        <Search size={16} className="text-slate shrink-0" />
         <input
           value={query}
           onChange={(e) => {
@@ -62,87 +65,76 @@ export function CitySearch({
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Search any city..."
-          aria-label="Search for a city"
-          className="w-full bg-transparent text-sm text-cloud placeholder:text-slate/60 focus:outline-none"
+          placeholder="Search a city…"
+          className="bg-transparent outline-none text-sm text-cloud placeholder:text-slate-dim flex-1 min-w-0"
         />
-        {searching && <Loader2 className="h-4 w-4 animate-spin text-slate" aria-hidden="true" />}
+        {searching && <Loader2 size={14} className="animate-spin text-slate shrink-0" />}
         <button
-          onClick={async () => {
-            const loc = await detect();
-            if (loc) {
-              onSelect(loc);
-              setOpen(false);
-            }
-          }}
-          disabled={detecting}
-          aria-label="Use my current location"
-          className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate transition hover:border-cyan/50 hover:text-cyan disabled:opacity-50"
+          type="button"
+          onClick={() => onUseLocation?.()}
+          disabled={locating}
+          title="Use current location"
+          className="shrink-0 text-slate hover:text-amber transition-colors disabled:opacity-50"
         >
-          {detecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" />}
-          Locate me
+          {locating ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
         </button>
-        {current && (
-          <button
-            onClick={() => (isFavorite ? removeFavorite(current) : addFavorite(current))}
-            aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
-            aria-pressed={isFavorite}
-            className="shrink-0"
-          >
-            <Star
-              className={cn("h-4 w-4 transition", isFavorite ? "fill-amber text-amber" : "text-slate")}
-              aria-hidden="true"
-            />
-          </button>
-        )}
       </div>
 
-      {open && (query.length >= 2 ? results.length > 0 : favorites.length > 0) && (
-        <div className="absolute inset-x-0 top-full z-20 mt-2 max-h-72 overflow-auto rounded-xl border border-white/10 bg-dusk shadow-glass">
-          {query.length >= 2
-            ? results.map((r) => (
-                <ResultRow
-                  key={`${r.latitude}-${r.longitude}`}
-                  city={r}
-                  onClick={() => {
-                    onSelect(r);
-                    setQuery("");
-                    setOpen(false);
-                  }}
-                />
-              ))
-            : favorites.map((r) => (
-                <ResultRow
-                  key={`${r.latitude}-${r.longitude}`}
-                  city={r}
-                  favorite
-                  onClick={() => {
-                    onSelect(r);
-                    setOpen(false);
-                  }}
-                />
-              ))}
+      {open && results.length > 0 && (
+        <div className="absolute z-20 mt-1.5 w-full bg-dusk2 border border-white/10 rounded-xl shadow-glass overflow-hidden">
+          {results.map((r) => {
+            const label = [r.name, r.admin1, r.country]
+              .filter(Boolean)
+              .join(", ");
+            return (
+              <button
+                key={r.id}
+                onClick={() => {
+                  onSelect(r);
+                  setQuery(label);
+                  setOpen(false);
+                }}
+                className="w-full text-left px-3.5 py-2.5 text-sm text-cloud hover:bg-white/5 transition-colors flex items-center gap-2"
+              >
+                <MapPin size={13} className="text-slate shrink-0" />
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
-function ResultRow({ city, onClick, favorite }: { city: GeoResult; onClick: () => void; favorite?: boolean }) {
+interface FavoriteChipsProps {
+  favorites: { id: string; placeName: string; lat: number; lon: number }[];
+  onSelect: (f: { lat: number; lon: number; label: string }) => void;
+  onRemove: (id: string) => void;
+}
+
+export function FavoriteChips({ favorites, onSelect, onRemove }: FavoriteChipsProps) {
+  if (!favorites.length) return null;
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-cloud transition hover:bg-white/5"
-    >
-      {favorite ? (
-        <Star className="h-3.5 w-3.5 shrink-0 fill-amber text-amber" aria-hidden="true" />
-      ) : (
-        <MapPin className="h-3.5 w-3.5 shrink-0 text-slate" aria-hidden="true" />
-      )}
-      <span>
-        {city.name}
-        {city.admin1 ? `, ${city.admin1}` : ""} {city.country ? `· ${city.country}` : ""}
-      </span>
-    </button>
+    <div className="flex flex-wrap gap-2 mt-3">
+      {favorites.map((f) => (
+        <div
+          key={f.id}
+          className="group flex items-center gap-1.5 bg-dusk2 border border-white/10 rounded-full pl-3 pr-1.5 py-1 text-xs text-slate hover:border-amber/40 transition-colors"
+        >
+          <button onClick={() => onSelect({ lat: f.lat, lon: f.lon, label: f.placeName })} className="hover:text-cloud flex items-center gap-1.5">
+            <Star size={11} className="text-amber" fill="currentColor" />
+            {f.placeName}
+          </button>
+          <button
+            onClick={() => onRemove(f.id)}
+            className="opacity-0 group-hover:opacity-100 text-slate-dim hover:text-red-400 transition-opacity px-1"
+            title="Remove"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }

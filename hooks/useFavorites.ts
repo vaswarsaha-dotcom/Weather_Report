@@ -1,45 +1,39 @@
+// hooks/useFavorites.ts
 "use client";
-
 import { useCallback, useEffect, useState } from "react";
-import type { GeoResult } from "@/types/weather";
+
+export interface Favorite { id: string; placeName: string; lat: number; lon: number; }
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<GeoResult[]>([]);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/user/favorites");
+      if (!res.ok) { setFavorites([]); return; }
       const data = await res.json();
-      setFavorites(data.favorites ?? []);
-    } finally {
-      setLoading(false);
-    }
+      setFavorites(data.favorites || []);
+    } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { load(); }, [load]);
 
-  const addFavorite = useCallback(async (city: GeoResult) => {
+  const addFavorite = useCallback(async (placeName: string, lat: number, lon: number) => {
     const res = await fetch("/api/user/favorites", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(city)
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ placeName, lat, lon }),
     });
-    const data = await res.json();
-    if (res.ok) setFavorites(data.favorites);
-  }, []);
+    if (!res.ok) throw new Error("Couldn't save that city.");
+    await load();
+  }, [load]);
 
-  const removeFavorite = useCallback(async (city: GeoResult) => {
-    const url = new URL("/api/user/favorites", window.location.origin);
-    url.searchParams.set("lat", String(city.latitude));
-    url.searchParams.set("lon", String(city.longitude));
-    const res = await fetch(url.toString(), { method: "DELETE" });
-    const data = await res.json();
-    if (res.ok) setFavorites(data.favorites);
-  }, []);
+  const removeFavorite = useCallback(async (id: string) => {
+    setFavorites((f) => f.filter((fav) => fav.id !== id));
+    const res = await fetch(`/api/user/favorites?id=${id}`, { method: "DELETE" });
+    if (!res.ok) await load();
+  }, [load]);
 
-  return { favorites, loading, addFavorite, removeFavorite, refresh };
+  return { favorites, loading, addFavorite, removeFavorite, refresh: load };
 }

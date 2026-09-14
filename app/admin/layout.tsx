@@ -1,11 +1,16 @@
+// app/admin/layout.tsx
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { AdminNav } from "@/components/admin/AdminNav";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-  if (!session) redirect("/login?redirect=/admin");
-  if (session.role !== "admin") redirect("/dashboard");
-
-  return <AdminShell userEmail={session.email}>{children}</AdminShell>;
+  const user = await getSession();
+  if (!user) redirect("/login?redirect=/admin");
+  if (user.role !== "admin") redirect("/dashboard");
+  return (
+    <div className="flex min-h-screen">
+      <AdminNav />
+      <div className="flex-1 p-8">{children}</div>
+    </div>
+  );
 }

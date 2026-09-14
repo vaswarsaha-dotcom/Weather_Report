@@ -1,70 +1,45 @@
+// app/(auth)/signup/page.tsx
 "use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { signupSchema, type SignupInput } from "@/lib/validation";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { GlassCard } from "@/components/ui/Card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting }
-  } = useForm<SignupInput>({ resolver: zodResolver(signupSchema) });
-
-  const onSubmit = async (data: SignupInput) => {
-    setFormError(null);
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null); setLoading(true);
     try {
-      await signup(data.name, data.email, data.password);
+      await signup(email, password, name);
       router.push("/dashboard");
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
-  };
+    } catch (err: any) {
+      setError(err.message);
+    } finally { setLoading(false); }
+  }
 
   return (
-    <GlassCard className="p-8">
-      <h1 className="font-display text-2xl font-medium text-cloud">Create your account</h1>
-      <p className="mt-1 text-sm text-slate">Free forever on the Starter plan.</p>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
-        <Input label="Full name" autoComplete="name" error={errors.name?.message} {...register("name")} />
-        <Input label="Email" type="email" autoComplete="email" error={errors.email?.message} {...register("email")} />
-        <Input
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
-
-        {formError && (
-          <p role="alert" className="text-sm text-red-400">
-            {formError}
-          </p>
-        )}
-
-        <Button type="submit" className="w-full" loading={isSubmitting}>
-          Create account
-        </Button>
+    <GlassCard>
+      <h1 className="font-display text-xl font-bold text-cloud mb-1">Create an account</h1>
+      <p className="text-sm text-slate mb-6">Free to start — no card required.</p>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        <Button type="submit" loading={loading} className="w-full mt-2">Create account</Button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-slate">
-        Already have an account?{" "}
-        <Link href="/login" className="text-cyan hover:underline">
-          Log in
-        </Link>
-      </p>
+      <p className="text-xs text-slate mt-5 text-center">Already have an account? <Link href="/login" className="text-amber">Sign in</Link></p>
     </GlassCard>
   );
 }

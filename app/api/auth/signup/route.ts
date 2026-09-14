@@ -1,48 +1,166 @@
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { hashPassword, signSession, setSessionCookie } from "@/lib/auth";
-import { signupSchema } from "@/lib/validation";
-import { checkRateLimit, keyFromRequest } from "@/lib/rateLimit";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import {
+  createServiceClient,
+} from "@/lib/supabase/server";
+import {
+  hashPassword,
+  setSessionCookie,
+  findUserByEmail,
+} from "@/lib/auth";
+import { rateLimit } from "@/lib/rateLimit";
 
-export async function POST(req: Request) {
-  const rl = checkRateLimit(keyFromRequest(req, "signup"), 10, 60_000);
-  if (!rl.allowed) {
-    return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
-  }
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1).max(100),
+});
 
-  const body = await req.json().catch(() => null);
-  const parsed = signupSchema.safeParse(body);
+export async function POST(req: NextRequest) {
+  try {
+    // -----------------------------
+    // Rate limiting
+    // -----------------------------
+    const ip =
+      req.headers.get("x-forwarded-for") ||
+      req.headers.get("x-real-ip") ||
+      "unknown";
 
-  if (!parsed.success) {
+    const rl = rateLimit(`signup:${ip}`, 5, 60_000);
+
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many attempts. Try again shortly.",
+        },
+        { status: 429 }
+      );
+    }
+
+    // -----------------------------
+    // Parse request
+    // -----------------------------
+    const body = await req.json().catch(() => null);
+
+    const parsed = schema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: parsed.error.issues[0]?.message || "Invalid input",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { email, password, name } = parsed.data;
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedName = name.trim();
+
+    // -----------------------------
+    // Check existing user
+    // -----------------------------
+    const existing = await findUserByEmail(normalizedEmail);
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          error: "An account with that email already exists.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // -----------------------------
+    // Hash password
+    // -----------------------------
+    const passwordHash = await hashPassword(password);
+
+    // -----------------------------
+    // Supabase
+    // -----------------------------
+    const supabase = createServiceClient();
+
+    const { data, error } = await supabase
+      .from("users")
+      .insert({
+        email: normalizedEmail,
+        name: normalizedName,
+        password_hash: passwordHash,
+        role: "user",
+      })
+      .select("id, email, name, role, branding")
+      .single();
+
+    // -----------------------------
+    // IMPORTANT:
+    // Show the REAL Supabase error
+    // in your terminal.
+    // -----------------------------
+    if (error) {
+      console.error("=================================");
+      console.error("SUPABASE SIGNUP ERROR");
+      console.error("Message:", error.message);
+      console.error("Code:", error.code);
+      console.error("Details:", error.details);
+      console.error("Hint:", error.hint);
+      console.error("=================================");
+
+      return NextResponse.json(
+        {
+          error: "Couldn't create the account.",
+          details:
+            process.env.NODE_ENV === "development"
+              ? error.message
+              : undefined,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      console.error("SUPABASE SIGNUP ERROR: No data returned");
+
+      return NextResponse.json(
+        {
+          error: "Account was not created.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // -----------------------------
+    // Create login session
+    // -----------------------------
+    await setSessionCookie({
+      sub: data.id,
+      role: data.role,
+      email: data.email,
+    });
+
+    // -----------------------------
+    // Success
+    // -----------------------------
     return NextResponse.json(
-      { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
-      { status: 400 }
+      {
+        success: true,
+        message: "Account created successfully.",
+        user: data,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("=================================");
+    console.error("SIGNUP SERVER ERROR");
+    console.error(error);
+    console.error("=================================");
+
+    return NextResponse.json(
+      {
+        error: "Internal server error while creating account.",
+      },
+      { status: 500 }
     );
   }
-
-  const { name, email, password } = parsed.data;
-
-  await connectDB();
-
-  const existing = await User.findOne({ email });
-  if (existing) {
-    return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
-  }
-
-  const passwordHash = await hashPassword(password);
-  const user = await User.create({
-    name,
-    email,
-    passwordHash,
-    lastLoginAt: new Date()
-  });
-
-  const token = signSession({ userId: user.id, email: user.email, role: user.role });
-  await setSessionCookie(token);
-
-  return NextResponse.json(
-    { user: { id: user.id, name: user.name, email: user.email, role: user.role } },
-    { status: 201 }
-  );
 }

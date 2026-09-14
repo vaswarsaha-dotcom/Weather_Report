@@ -1,66 +1,38 @@
-import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
+// app/api/admin/users/route.ts
+import { NextResponse, type NextRequest } from "next/server";
+import { requireAdmin, AuthError } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/server";
 
-async function requireAdmin() {
-  const session = await getSession();
-  if (!session || session.role !== "admin") return null;
-  return session;
-}
-
-export async function GET(req: Request) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q")?.trim();
-  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
-  const pageSize = 20;
-
-  await connectDB();
-
-  const filter = q ? { $or: [{ name: new RegExp(q, "i") }, { email: new RegExp(q, "i") }] } : {};
-
-  const [users, total] = await Promise.all([
-    User.find(filter)
-      .select("name email role createdAt lastLoginAt favoriteCities")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .lean(),
-    User.countDocuments(filter)
-  ]);
-
-  return NextResponse.json({
-    users: users.map((u) => ({
-      id: u._id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      createdAt: u.createdAt,
-      lastLoginAt: u.lastLoginAt,
-      favoriteCityCount: u.favoriteCities?.length ?? 0
-    })),
-    total,
-    page,
-    pageSize
-  });
-}
-
-export async function PATCH(req: Request) {
-  const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-
-  const body = await req.json().catch(() => null);
-  const { userId, role } = body ?? {};
-  if (!userId || !["user", "admin"].includes(role)) {
-    return NextResponse.json({ error: "userId and a valid role are required" }, { status: 400 });
+export async function GET(req: NextRequest) {
+  try {
+    await requireAdmin();
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const pageSize = 25;
+    const supabase = createServiceClient();
+    const { data, error, count } = await supabase.from("users").select("id, email, name, role, created_at", { count: "exact" })
+      .order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1);
+    if (error) throw error;
+    return NextResponse.json({ users: data, total: count, page, pageSize });
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: "Couldn't load users." }, { status: 500 });
   }
+}
 
-  await connectDB();
-  const user = await User.findByIdAndUpdate(userId, { role }, { new: true }).select("name email role");
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  return NextResponse.json({ user });
+export async function PATCH(req: NextRequest) {
+  try {
+    await requireAdmin();
+    const { id, role } = await req.json();
+    if (!id || !["user", "admin"].includes(role)) {
+      return NextResponse.json({ error: "id and a valid role are required." }, { status: 400 });
+    }
+    const supabase = createServiceClient();
+    const { data, error } = await supabase.from("users").update({ role }).eq("id", id).select("id, email, name, role").single();
+    if (error) throw error;
+    return NextResponse.json({ user: data });
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: "Couldn't update user." }, { status: 500 });
+  }
 }

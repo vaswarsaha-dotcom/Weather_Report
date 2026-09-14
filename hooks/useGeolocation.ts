@@ -1,46 +1,34 @@
+// hooks/useGeolocation.ts
 "use client";
-
 import { useCallback, useState } from "react";
-import type { GeoResult } from "@/types/weather";
+
+interface GeoState {
+  lat: number | null; lon: number | null;
+  status: "idle" | "locating" | "granted" | "denied" | "unsupported";
+  error: string | null;
+}
 
 export function useGeolocation() {
-  const [detecting, setDetecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<GeoState>({ lat: null, lon: null, status: "idle", error: null });
 
-  const detect = useCallback(async (): Promise<GeoResult | null> => {
+  const locate = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("Geolocation isn't supported by this browser.");
-      return null;
+      setState((s) => ({ ...s, status: "unsupported", error: "Geolocation isn't supported here." }));
+      return Promise.resolve(null);
     }
-
-    setDetecting(true);
-    setError(null);
-
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: false,
-          timeout: 8000
-        })
+    setState((s) => ({ ...s, status: "locating", error: null }));
+    return new Promise<{ lat: number; lon: number } | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          setState({ lat, lon, status: "granted", error: null });
+          resolve({ lat, lon });
+        },
+        () => { setState({ lat: null, lon: null, status: "denied", error: "Location permission denied." }); resolve(null); },
+        { timeout: 6000 }
       );
-
-      const { latitude, longitude } = position.coords;
-      const url = new URL("/api/geocode", window.location.origin);
-      url.searchParams.set("lat", String(latitude));
-      url.searchParams.set("lon", String(longitude));
-
-      const res = await fetch(url.toString());
-      const data = await res.json();
-      return (data.results?.[0] as GeoResult) ?? null;
-    } catch (err) {
-      setError(
-        (err as GeolocationPositionError)?.message || "Couldn't detect your location. Try searching instead."
-      );
-      return null;
-    } finally {
-      setDetecting(false);
-    }
+    });
   }, []);
 
-  return { detect, detecting, error };
+  return { ...state, locate };
 }

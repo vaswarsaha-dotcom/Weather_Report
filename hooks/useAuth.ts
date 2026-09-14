@@ -1,64 +1,52 @@
+// hooks/useAuth.ts
 "use client";
-
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import type { PublicUser } from "@/types/user";
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  role: "user" | "admin";
-}
+interface AuthState { user: PublicUser | null; loading: boolean; error: string | null; }
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [state, setState] = useState<AuthState>({ user: null, loading: true, error: null });
 
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) { setState({ user: null, loading: false, error: null }); return; }
       const data = await res.json();
-      setUser(data.user);
-    } finally {
-      setLoading(false);
+      setState({ user: data.user, loading: false, error: null });
+    } catch {
+      setState({ user: null, loading: false, error: "Couldn't reach the server." });
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Login failed");
-    setUser(data.user);
-    return data.user as AuthUser;
+    if (!res.ok) throw new Error(data.error || "Login failed");
+    setState({ user: data.user, loading: false, error: null });
+    return data.user as PublicUser;
   }, []);
 
-  const signup = useCallback(async (name: string, email: string, password: string) => {
+  const signup = useCallback(async (email: string, password: string, name: string) => {
     const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password })
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, name }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Signup failed");
-    setUser(data.user);
-    return data.user as AuthUser;
+    if (!res.ok) throw new Error(data.error || "Signup failed");
+    setState({ user: data.user, loading: false, error: null });
+    return data.user as PublicUser;
   }, []);
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    setUser(null);
-    router.push("/login");
-  }, [router]);
+    setState({ user: null, loading: false, error: null });
+  }, []);
 
-  return { user, loading, login, signup, logout, refresh };
+  return { ...state, login, signup, logout, refresh };
 }

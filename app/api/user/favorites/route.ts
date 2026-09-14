@@ -1,65 +1,51 @@
-import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
+// app/api/user/favorites/route.ts
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { requireSession, AuthError } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  await connectDB();
-  const user = await User.findById(session.userId).select("favoriteCities");
-  return NextResponse.json({ favorites: user?.favoriteCities ?? [] });
+  try {
+    const user = await requireSession();
+    const supabase = createServiceClient();
+    const { data, error } = await supabase.from("favorites").select("id, place_name, lat, lon").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (error) throw error;
+    return NextResponse.json({ favorites: data.map((f: any) => ({ id: f.id, placeName: f.place_name, lat: f.lat, lon: f.lon })) });
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: "Couldn't load favorites." }, { status: 500 });
+  }
 }
 
-export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const schema = z.object({ placeName: z.string().min(1), lat: z.number(), lon: z.number() });
 
-  const city = await req.json().catch(() => null);
-  if (!city?.name || typeof city.latitude !== "number" || typeof city.longitude !== "number") {
-    return NextResponse.json({ error: "Invalid city payload" }, { status: 400 });
+export async function POST(req: NextRequest) {
+  try {
+    const user = await requireSession();
+    const body = schema.parse(await req.json());
+    const supabase = createServiceClient();
+    const { error } = await supabase.from("favorites").upsert(
+      { user_id: user.id, place_name: body.placeName, lat: body.lat, lon: body.lon }, { onConflict: "user_id,lat,lon" }
+    );
+    if (error) throw error;
+    return NextResponse.json({ ok: true }, { status: 201 });
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: "Couldn't save favorite." }, { status: 500 });
   }
-
-  await connectDB();
-  const user = await User.findById(session.userId);
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  const alreadySaved = user.favoriteCities.some(
-    (c) => c.latitude === city.latitude && c.longitude === city.longitude
-  );
-  if (!alreadySaved) {
-    if (user.favoriteCities.length >= 20) {
-      return NextResponse.json({ error: "Favorite city limit reached (20)" }, { status: 400 });
-    }
-    user.favoriteCities.push({
-      id: city.id ?? 0,
-      name: city.name,
-      country: city.country ?? "",
-      latitude: city.latitude,
-      longitude: city.longitude,
-      timezone: city.timezone ?? "auto"
-    });
-    await user.save();
-  }
-
-  return NextResponse.json({ favorites: user.favoriteCities });
 }
 
-export async function DELETE(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { searchParams } = new URL(req.url);
-  const lat = Number(searchParams.get("lat"));
-  const lon = Number(searchParams.get("lon"));
-
-  await connectDB();
-  const user = await User.findById(session.userId);
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  user.favoriteCities = user.favoriteCities.filter((c) => !(c.latitude === lat && c.longitude === lon));
-  await user.save();
-
-  return NextResponse.json({ favorites: user.favoriteCities });
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await requireSession();
+    const id = new URL(req.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+    const supabase = createServiceClient();
+    const { error } = await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.message }, { status: err.status });
+    return NextResponse.json({ error: "Couldn't remove favorite." }, { status: 500 });
+  }
 }

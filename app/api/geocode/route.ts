@@ -1,31 +1,48 @@
-import { NextResponse } from "next/server";
-import { searchCities, reverseGeocode } from "@/lib/geocode";
-import { checkRateLimit, keyFromRequest } from "@/lib/rateLimit";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET(req: Request) {
-  const rl = checkRateLimit(keyFromRequest(req, "geocode"), 60, 60_000);
-  if (!rl.allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
-  }
-
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get("q");
-  const lat = searchParams.get("lat");
-  const lon = searchParams.get("lon");
-
+export async function GET(req: NextRequest) {
   try {
-    if (lat && lon) {
-      const result = await reverseGeocode(Number(lat), Number(lon));
-      return NextResponse.json({ results: result ? [result] : [] });
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get("q");
+
+    if (!query || query.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Missing search query" },
+        { status: 400 }
+      );
     }
 
-    if (!query) {
-      return NextResponse.json({ error: "Provide a `q` search term or `lat`/`lon`" }, { status: 400 });
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+      query.trim()
+    )}&count=5&language=en&format=json`;
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch locations" },
+        { status: 502 }
+      );
     }
 
-    const results = await searchCities(query);
+    const data = await res.json();
+
+    const results = (data.results || []).map((place: any) => ({
+      id: place.id,
+      name: place.name,
+      country: place.country,
+      admin1: place.admin1,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      timezone: place.timezone,
+    }));
+
     return NextResponse.json({ results });
-  } catch (err) {
-    return NextResponse.json({ error: "Geocoding lookup failed", detail: (err as Error).message }, { status: 502 });
+  } catch (error) {
+    console.error("GEOCODE ERROR:", error);
+    return NextResponse.json(
+      { error: "Internal server error while searching for location." },
+      { status: 500 }
+    );
   }
 }

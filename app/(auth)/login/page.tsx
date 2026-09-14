@@ -1,85 +1,44 @@
+// app/(auth)/login/page.tsx
 "use client";
-
-import Link from "next/link";
-import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { loginSchema, type LoginInput } from "@/lib/validation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { GlassCard } from "@/components/ui/Card";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<GlassCard className="h-[420px] animate-pulse p-8" />}>
-      <LoginForm />
-    </Suspense>
-  );
-}
-
-function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [formError, setFormError] = useState<string | null>(null);
+  const params = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting }
-  } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
-
-  const onSubmit = async (data: LoginInput) => {
-    setFormError(null);
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null); setLoading(true);
     try {
-      await login(data.email, data.password);
-      router.push(searchParams.get("redirect") || "/dashboard");
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
-  };
+      await login(email, password);
+      router.push(params.get("redirect") || "/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally { setLoading(false); }
+  }
 
   return (
-    <GlassCard className="p-8">
-      <h1 className="font-display text-2xl font-medium text-cloud">Welcome back</h1>
-      <p className="mt-1 text-sm text-slate">Log in to your dashboard.</p>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
-        <Input label="Email" type="email" autoComplete="email" error={errors.email?.message} {...register("email")} />
-        <Input
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
-
-        {formError && (
-          <p role="alert" className="text-sm text-red-400">
-            {formError}
-          </p>
-        )}
-
-        <div className="flex items-center justify-between text-sm">
-          <Link href="/forgot-password" className="text-cyan hover:underline">
-            Forgot password?
-          </Link>
-        </div>
-
-        <Button type="submit" className="w-full" loading={isSubmitting}>
-          Log in
-        </Button>
+    <GlassCard>
+      <h1 className="font-display text-xl font-bold text-cloud mb-1">Welcome back</h1>
+      <p className="text-sm text-slate mb-6">Sign in to your dashboard.</p>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        <Button type="submit" loading={loading} className="w-full mt-2">Sign in</Button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-slate">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-cyan hover:underline">
-          Sign up
-        </Link>
-      </p>
+      <p className="text-xs text-slate mt-5 text-center">No account? <Link href="/signup" className="text-amber">Sign up</Link></p>
     </GlassCard>
   );
 }
