@@ -1,165 +1,48 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import {
-  createServiceClient,
-} from "@/lib/supabase/server";
-import {
-  hashPassword,
-  setSessionCookie,
-  findUserByEmail,
-} from "@/lib/auth";
-import { rateLimit } from "@/lib/rateLimit";
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  name: z.string().min(1).max(100),
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    // -----------------------------
-    // Rate limiting
-    // -----------------------------
-    const ip =
-      req.headers.get("x-forwarded-for") ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
-
-    const rl = rateLimit(`signup:${ip}`, 5, 60_000);
-
-    if (!rl.allowed) {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
       return NextResponse.json(
-        {
-          error: "Too many attempts. Try again shortly.",
-        },
-        { status: 429 }
+        { error: "Supabase env vars missing. Check .env.local and restart the dev server." },
+        { status: 500 }
       );
     }
 
-    // -----------------------------
-    // Parse request
-    // -----------------------------
-    const body = await req.json().catch(() => null);
-
-    const parsed = schema.safeParse(body);
-
-    if (!parsed.success) {
+    const { email, password } = await req.json();
+    if (!email || !password || String(password).length < 6) {
       return NextResponse.json(
-        {
-          error: parsed.error.issues[0]?.message || "Invalid input",
-        },
+        { error: "Valid email and a password of 6+ characters required" },
         { status: 400 }
       );
     }
 
-    const { email, password, name } = parsed.data;
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const normalizedName = name.trim();
-
-    // -----------------------------
-    // Check existing user
-    // -----------------------------
-    const existing = await findUserByEmail(normalizedEmail);
-
-    if (existing) {
-      return NextResponse.json(
-        {
-          error: "An account with that email already exists.",
-        },
-        { status: 409 }
-      );
-    }
-
-    // -----------------------------
-    // Hash password
-    // -----------------------------
-    const passwordHash = await hashPassword(password);
-
-    // -----------------------------
-    // Supabase
-    // -----------------------------
-    const supabase = createServiceClient();
-
-    const { data, error } = await supabase
-      .from("users")
-      .insert({
-        email: normalizedEmail,
-        name: normalizedName,
-        password_hash: passwordHash,
-        role: "user",
-      })
-      .select("id, email, name, role, branding")
-      .single();
-
-    // -----------------------------
-    // IMPORTANT:
-    // Show the REAL Supabase error
-    // in your terminal.
-    // -----------------------------
-    if (error) {
-      console.error("=================================");
-      console.error("SUPABASE SIGNUP ERROR");
-      console.error("Message:", error.message);
-      console.error("Code:", error.code);
-      console.error("Details:", error.details);
-      console.error("Hint:", error.hint);
-      console.error("=================================");
-
-      return NextResponse.json(
-        {
-          error: "Couldn't create the account.",
-          details:
-            process.env.NODE_ENV === "development"
-              ? error.message
-              : undefined,
-        },
-        { status: 500 }
-      );
-    }
-
-    if (!data) {
-      console.error("SUPABASE SIGNUP ERROR: No data returned");
-
-      return NextResponse.json(
-        {
-          error: "Account was not created.",
-        },
-        { status: 500 }
-      );
-    }
-
-    // -----------------------------
-    // Create login session
-    // -----------------------------
-    await setSessionCookie({
-      sub: data.id,
-      role: data.role,
-      email: data.email,
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email: String(email).trim().toLowerCase(),
+      password,
     });
 
-    // -----------------------------
-    // Success
-    // -----------------------------
+    if (error) {
+      console.error("[signup] supabase error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     return NextResponse.json(
       {
-        success: true,
-        message: "Account created successfully.",
-        user: data,
+        user: data.user ? { id: data.user.id, email: data.user.email } : null,
+        needsConfirmation: !data.session,
       },
       { status: 201 }
     );
-  } catch (error) {
-    console.error("=================================");
-    console.error("SIGNUP SERVER ERROR");
-    console.error(error);
-    console.error("=================================");
-
+  } catch (err) {
+    console.error("[signup] crashed:", err);
     return NextResponse.json(
-      {
-        error: "Internal server error while creating account.",
-      },
+      { error: err instanceof Error ? err.message : "Server error" },
       { status: 500 }
     );
   }

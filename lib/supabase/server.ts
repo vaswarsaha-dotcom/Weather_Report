@@ -1,7 +1,14 @@
-import { createServerClient } from "@supabase/ssr";
+// lib/supabase/server.ts  (server-only: never import from a "use client" file)
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
+type CookieToSet = { name: string; value: string; options: CookieOptions };
+
+/**
+ * Session-aware client. Reads/writes the logged-in user's cookies.
+ * Use in route handlers, server components and layouts.
+ */
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -13,14 +20,13 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
           } catch {
-            // Can happen when called from a Server Component.
+            // Called from a Server Component; safe to ignore
           }
         },
       },
@@ -28,22 +34,21 @@ export async function createClient() {
   );
 }
 
+/**
+ * Admin client using the service role key. Bypasses row-level security.
+ * Server only. Never import this into client code.
+ */
 export function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const secretKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL is missing");
+  if (!url || !key) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local"
+    );
   }
 
-  if (!secretKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing");
-  }
-
-  return createSupabaseClient(url, secretKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+  return createSupabaseClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }

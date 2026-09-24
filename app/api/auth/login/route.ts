@@ -1,28 +1,53 @@
 // app/api/auth/login/route.ts
-import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import { findUserByEmail, verifyPassword, setSessionCookie } from "@/lib/auth";
-import { rateLimit } from "@/lib/rateLimit";
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
+export async function POST(req: Request) {
+  try {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
+      return NextResponse.json(
+        { error: "Supabase env vars missing. Check .env.local and restart the dev server." },
+        { status: 500 }
+      );
+    }
 
-export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") || "unknown";
-  const rl = rateLimit(`login:${ip}`, 10, 60_000);
-  if (!rl.allowed) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
+    const body = await req.json().catch(() => null);
+    const email = String(body?.email ?? "").trim().toLowerCase();
+    const password = String(body?.password ?? "");
 
-  const body = await req.json().catch(() => null);
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Enter a valid email and password." }, { status: 400 });
-  const { email, password } = parsed.data;
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
 
-  const user = await findUserByEmail(email);
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      // e.g. "Invalid login credentials" or "Email not confirmed"
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    return NextResponse.json({
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[login] crashed:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Server error" },
+      { status: 500 }
+    );
   }
-
-  await setSessionCookie({ sub: user.id, role: user.role, email: user.email });
-  return NextResponse.json({
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, branding: user.branding },
-  });
-}
+}   

@@ -1,52 +1,61 @@
-// hooks/useAuth.ts
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import type { PublicUser } from "@/types/user";
 
-interface AuthState { user: PublicUser | null; loading: boolean; error: string | null; }
+import { useCallback, useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 
 export function useAuth() {
-  const [state, setState] = useState<AuthState>({ user: null, loading: true, error: null });
+  const [supabase] = useState(() => createClient());
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auth/me");
-      if (!res.ok) { setState({ user: null, loading: false, error: null }); return; }
-      const data = await res.json();
-      setState({ user: data.user, loading: false, error: null });
-    } catch {
-      setState({ user: null, loading: false, error: "Couldn't reach the server." });
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh]);
-
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+  // Load the current session, then keep it in sync
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+      setLoading(false);
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Login failed");
-    setState({ user: data.user, loading: false, error: null });
-    return data.user as PublicUser;
-  }, []);
 
-  const signup = useCallback(async (email: string, password: string, name: string) => {
-    const res = await fetch("/api/auth/signup", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Signup failed");
-    setState({ user: data.user, loading: false, error: null });
-    return data.user as PublicUser;
-  }, []);
+
+    return () => sub.subscription.unsubscribe();
+  }, [supabase]);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) throw new Error(error.message);
+      setUser(data.user);
+      return data.user;
+    },
+    [supabase]
+  );
+
+  const signup = useCallback(
+    async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) throw new Error(error.message);
+      if (!data.session) {
+        throw new Error("Account created. Check your email to confirm it, then sign in.");
+      }
+      setUser(data.user);
+      return data.user;
+    },
+    [supabase]
+  );
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setState({ user: null, loading: false, error: null });
-  }, []);
+    await supabase.auth.signOut();
+    setUser(null);
+  }, [supabase]);
 
-  return { ...state, login, signup, logout, refresh };
+  return { user, loading, login, signup, logout };
 }
