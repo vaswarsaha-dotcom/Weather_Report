@@ -40,13 +40,14 @@ export default async function DashboardLayout({
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-ink text-cloud">
+    <div className="relative isolate min-h-screen w-full bg-ink text-cloud">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-20 bg-isobar-glow opacity-60" />
 
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <header className="relative z-50 border-b border-white/10 bg-ink/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-[1000] border-b border-white/10 bg-ink/80 backdrop-blur-xl supports-[backdrop-filter]:bg-ink/60">
         <div
           className="
             mx-auto
@@ -390,18 +391,7 @@ export default async function DashboardLayout({
 
       <main
         className="
-          relative
-          mx-auto
-          w-full
-          min-w-0
-          max-w-[1600px]
-          overflow-x-hidden
-          px-3
-          py-4
-          sm:px-5
-          sm:py-6
-          lg:px-6
-          lg:py-8
+          relative mx-auto w-full min-w-0 max-w-[1600px] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 lg:py-8
         "
       >
         {/* IMPORTANT:

@@ -22,21 +22,21 @@ export function Forecast10Day({
   unit: "C" | "F";
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-glass backdrop-blur-xl sm:p-6">
+    <section className="panel panel-pad">
 
       <div className="mb-6">
 
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+        <p className="eyebrow">
           Forecast
         </p>
 
-        <h2 className="mt-1 font-display text-2xl text-cloud">
+        <h2 className="panel-title">
           10-day outlook
         </h2>
 
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
 
         {snapshot.daily
           .slice(0, 10)
@@ -61,10 +61,10 @@ export function Forecast10Day({
                 transition={{
                   delay: index * 0.04
                 }}
-                className={`min-w-[125px] flex-1 rounded-2xl border p-4 ${
+                className={`min-w-0 rounded-2xl border p-4 transition-colors hover:border-white/20 ${
                   index === 0
                     ? "border-cyan/30 bg-cyan/10"
-                    : "border-white/10 bg-black/10"
+                    : "border-white/[0.07] bg-black/15"
                 }`}
               >
 

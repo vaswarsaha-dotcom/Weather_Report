@@ -30,13 +30,13 @@ export function SunMoonCard({
     snapshot.current.sunset;
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-glass backdrop-blur-xl">
+    <section className="panel panel-pad h-full">
 
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+      <p className="eyebrow">
         Sun & sky
       </p>
 
-      <h2 className="mt-1 font-display text-2xl text-cloud">
+      <h2 className="panel-title">
         Daylight
       </h2>
 
@@ -62,7 +62,7 @@ export function SunMoonCard({
 
       </div>
 
-      <div className="mt-3 flex items-center gap-3 rounded-2xl bg-black/10 p-4">
+      <div className="mt-3 flex items-center gap-3 tile p-4">
 
         <Moon className="h-5 w-5 text-cloud" />
 
@@ -97,7 +97,7 @@ function TimeCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-black/10 p-4">
+    <div className="tile p-4">
 
       <Icon className="h-5 w-5 text-amber" />
 

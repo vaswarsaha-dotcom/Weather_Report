@@ -68,7 +68,7 @@ export function WeatherShell({
           Visible only below lg.
       ====================================================== */}
 
-      <div className="lg:hidden mb-4">
+      <div className="sticky top-[64px] z-30 -mx-1 mb-4 px-1 sm:top-[69px] lg:hidden">
         <div
           className="
             w-full
@@ -78,6 +78,7 @@ export function WeatherShell({
             border
             border-white/10
             bg-[#111a2e]/90
+            shadow-glass
             backdrop-blur-xl
             p-1.5
           "
@@ -99,9 +100,9 @@ export function WeatherShell({
                     items-center
                     gap-1.5
                     rounded-xl
-                    px-3
+                    px-3.5
                     py-2
-                    text-[11px]
+                    text-xs
                     font-medium
                     whitespace-nowrap
                     transition
@@ -134,7 +135,7 @@ export function WeatherShell({
             Content only
       ====================================================== */}
 
-      <div className="w-full min-w-0 lg:flex lg:items-start lg:gap-5">
+      <div className="w-full min-w-0 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-6">
 
         {/* ===================================================
             DESKTOP SIDEBAR
@@ -143,7 +144,7 @@ export function WeatherShell({
             Hidden on mobile.
         ==================================================== */}
 
-        <aside className="hidden lg:block lg:w-[190px] lg:flex-none">
+        <aside className="hidden lg:sticky lg:top-[88px] lg:block">
           <WeatherSidebar
             activeView={active}
             onChange={setActive}
@@ -156,7 +157,7 @@ export function WeatherShell({
             min-w-0 prevents horizontal overflow.
         ==================================================== */}
 
-        <div className="min-w-0 flex-1 w-full overflow-hidden">
+        <div className="w-full min-w-0">
 
           {/* TOP BAR */}
 
@@ -174,7 +175,7 @@ export function WeatherShell({
 
           {/* ACTIVE VIEW */}
 
-          <div className="w-full min-w-0 mt-5">
+          <div className="mt-5 w-full min-w-0 space-y-5">
             {views[active] ?? views.current}
           </div>
         </div>

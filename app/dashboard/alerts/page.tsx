@@ -25,11 +25,14 @@ export default function AlertsPage() {
   if (!hydrated) return null;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Alerts</h1>
+    <div className="min-w-0 space-y-5">
+      <div>
+        <p className="eyebrow">WeatherSphere Pro</p>
+        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-cloud">Alerts</h1>
+      </div>
 
       {!location ? (
-        <p className="text-sm text-slate">
+        <p className="panel panel-pad text-sm text-slate">
           Search for a city on the Overview page first — alerts are tied to a
           location.
         </p>

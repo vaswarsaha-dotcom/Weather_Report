@@ -179,7 +179,7 @@ export default function DashboardOverviewPage() {
 
   return (
     <WeatherBackground snapshot={snapshot}>
-      <div className="w-full space-y-5">
+      <div className="w-full min-w-0 space-y-5">
         <CitySearch onSelect={selectLocation} current={location} />
 
         {!location && (
@@ -240,7 +240,7 @@ export default function DashboardOverviewPage() {
                 </div>
               ),
               maps: (
-                <div className="min-h-[420px] overflow-hidden rounded-3xl border border-white/10 bg-black/10 shadow-glass backdrop-blur-xl">
+                <div className="panel isolate overflow-hidden">
                   <WeatherMap location={location} snapshot={snapshot} />
                 </div>
               ),

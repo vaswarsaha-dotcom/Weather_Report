@@ -64,13 +64,13 @@ export function WeatherSidebar({
   onChange,
 }: WeatherSidebarProps) {
   return (
-    <aside className="w-full shrink-0 lg:w-[220px]">
+    <div className="w-full">
       <div
         className="
-          rounded-2xl
+          rounded-3xl
           border border-white/10
-          bg-black/20
-          p-3
+          bg-white/[0.05]
+          p-2.5
           shadow-glass
           backdrop-blur-xl
         "
@@ -99,9 +99,9 @@ export function WeatherSidebar({
                   w-full
                   items-center
                   gap-3
-                  rounded-xl
-                  px-4
-                  py-3
+                  rounded-2xl
+                  px-3.5
+                  py-2.5
                   text-left
                   text-sm
                   font-medium
@@ -135,6 +135,6 @@ export function WeatherSidebar({
           })}
         </nav>
       </div>
-    </aside>
+    </div>
   );
 }

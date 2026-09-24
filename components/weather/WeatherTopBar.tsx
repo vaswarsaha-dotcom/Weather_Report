@@ -22,7 +22,7 @@ export function WeatherTopBar({
   disabled,
 }: Props) {
   return (
-    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-cyan">
           {eyebrow}
@@ -32,8 +32,8 @@ export function WeatherTopBar({
         </h1>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex rounded-full border border-white/10 bg-black/20 p-1 backdrop-blur">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="flex rounded-full border border-white/10 bg-white/[0.06] p-1 backdrop-blur">
           {(["C", "F"] as const).map((value) => (
             <button
               key={value}
@@ -52,7 +52,7 @@ export function WeatherTopBar({
         <button
           onClick={onRefresh}
           disabled={disabled || loading}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-cloud backdrop-blur transition hover:bg-white/10 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-cloud backdrop-blur transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh

@@ -270,11 +270,11 @@ export function WeatherTrends({ snapshot, unit }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 p-5 pb-3 sm:p-6">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400">
+          <p className="eyebrow">
             Trends
           </p>
 
-          <h2 className="mt-1 font-display text-xl font-semibold text-white">
+          <h2 className="panel-title text-xl">
             Temperature trend
           </h2>
 
@@ -316,8 +316,8 @@ export function WeatherTrends({ snapshot, unit }: Props) {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-4 gap-2 px-5 pb-4 sm:px-6">
-          <div className="rounded-xl bg-white/[0.025] px-3 py-2.5">
+        <div className="grid grid-cols-2 gap-2 px-5 pb-4 sm:grid-cols-4 sm:px-6">
+          <div className="tile min-w-0 px-3 py-2.5">
             <p className="text-[9px] uppercase tracking-wider text-slate-500">
               High
             </p>
@@ -327,7 +327,7 @@ export function WeatherTrends({ snapshot, unit }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white/[0.025] px-3 py-2.5">
+          <div className="tile min-w-0 px-3 py-2.5">
             <p className="text-[9px] uppercase tracking-wider text-slate-500">
               Low
             </p>
@@ -337,7 +337,7 @@ export function WeatherTrends({ snapshot, unit }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white/[0.025] px-3 py-2.5">
+          <div className="tile min-w-0 px-3 py-2.5">
             <p className="text-[9px] uppercase tracking-wider text-slate-500">
               Average
             </p>
@@ -347,7 +347,7 @@ export function WeatherTrends({ snapshot, unit }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl bg-white/[0.025] px-3 py-2.5">
+          <div className="tile min-w-0 px-3 py-2.5">
             <p className="text-[9px] uppercase tracking-wider text-slate-500">
               Change
             </p>

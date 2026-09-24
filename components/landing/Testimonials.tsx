@@ -26,7 +26,7 @@ const quotes = [
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="bg-dusk px-6 py-28">
+    <section id="testimonials" className="scroll-mt-16 bg-dusk px-6 py-24 sm:py-28">
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <p className="mb-3 text-xs uppercase tracking-widest text-amber">Trusted by teams</p>

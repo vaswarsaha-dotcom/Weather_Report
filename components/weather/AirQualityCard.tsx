@@ -14,17 +14,17 @@ export function AirQualityCard({
   data: AirQualityData | null;
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-glass backdrop-blur-xl">
+    <section className="panel panel-pad h-full">
 
       <div className="flex items-start justify-between">
 
         <div>
 
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+          <p className="eyebrow">
             Air quality
           </p>
 
-          <h2 className="mt-1 font-display text-2xl text-cloud">
+          <h2 className="panel-title">
             {data
               ? `AQI ${Math.round(data.aqi)}`
               : "Air quality"}
@@ -47,7 +47,7 @@ export function AirQualityCard({
             {data.status}
           </p>
 
-          <div className="mt-6 grid grid-cols-3 gap-3">
+          <div className="mt-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-3">
 
             <Metric
               label="PM2.5"
@@ -86,13 +86,13 @@ function Metric({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl bg-black/10 p-3">
+    <div className="tile p-3">
 
       <p className="text-[11px] text-slate">
         {label}
       </p>
 
-      <p className="mt-2 text-sm font-semibold text-cloud">
+      <p className="mt-2 break-words text-sm font-semibold text-cloud">
         {value}
       </p>
 

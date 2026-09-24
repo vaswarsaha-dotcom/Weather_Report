@@ -83,15 +83,15 @@ export function WeatherDetails({
   ];
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-glass backdrop-blur-xl sm:p-6">
+    <section className="panel panel-pad">
 
       <div className="mb-6">
 
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+        <p className="eyebrow">
           Details
         </p>
 
-        <h2 className="mt-1 font-display text-2xl text-cloud">
+        <h2 className="panel-title">
           Weather metrics
         </h2>
 
@@ -108,14 +108,14 @@ export function WeatherDetails({
           }) => (
             <div
               key={label}
-              className="rounded-2xl border border-white/10 bg-black/10 p-4"
+              className="tile min-w-0 p-4"
             >
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
 
-                <Icon className="h-5 w-5 text-cyan" />
+                <Icon className="h-5 w-5 shrink-0 text-cyan" />
 
-                <span className="text-xs text-slate">
+                <span className="truncate text-xs text-slate">
                   {description}
                 </span>
 

@@ -13,10 +13,10 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section className="max-w-5xl mx-auto px-6 py-20">
+    <section id="features" className="mx-auto max-w-5xl scroll-mt-20 px-6 py-20">
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {FEATURES.map((f) => (
-          <GlassCard key={f.title}>
+          <GlassCard key={f.title} className="transition-colors hover:border-white/20 hover:bg-white/[0.07]">
             <f.icon size={22} className="text-amber mb-3" />
             <h3 className="font-display text-base font-semibold text-cloud">{f.title}</h3>
             <p className="text-sm text-slate mt-1.5 leading-relaxed">{f.desc}</p>

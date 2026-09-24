@@ -35,15 +35,15 @@ export function MonthlyCalendar({
   });
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-glass backdrop-blur-xl sm:p-6">
+    <section className="panel panel-pad">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+        <p className="eyebrow">
           Monthly
         </p>
-        <h2 className="mt-1 font-display text-2xl text-cloud">{monthLabel}</h2>
+        <h2 className="panel-title">{monthLabel}</h2>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 text-center text-[11px] text-slate">
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-slate sm:gap-2">
         {WEEKDAYS.map((w) => (
           <div key={w} className="pb-1">
             {w}
@@ -51,7 +51,7 @@ export function MonthlyCalendar({
         ))}
 
         {cells.map((date, i) => {
-          if (!date) return <div key={`empty-${i}`} />;
+          if (!date) return <div key={`empty-${i}`} aria-hidden="true" />;
 
           const iso = date.toISOString().slice(0, 10);
           const day = dailyByDate.get(iso);
@@ -61,7 +61,7 @@ export function MonthlyCalendar({
           return (
             <div
               key={iso}
-              className={`flex min-h-[92px] flex-col items-center justify-between rounded-2xl border p-2 ${
+              className={`flex min-h-[78px] min-w-0 flex-col items-center justify-between overflow-hidden rounded-xl border p-1 sm:min-h-[92px] sm:rounded-2xl sm:p-2 ${
                 isToday
                   ? "border-cyan/40 bg-cyan/10"
                   : day
@@ -74,7 +74,7 @@ export function MonthlyCalendar({
               {day && Icon ? (
                 <>
                   <Icon className="h-5 w-5 text-cloud" strokeWidth={1.5} />
-                  <div className="flex items-center gap-1 text-[11px]">
+                  <div className="flex flex-col items-center text-[10px] leading-tight sm:flex-row sm:gap-1 sm:text-[11px]">
                     <span className="font-semibold text-cloud">
                       {formatTemperature(day.tempMax, unit)}
                     </span>
@@ -84,7 +84,7 @@ export function MonthlyCalendar({
                   </div>
                 </>
               ) : (
-                <span className="text-[10px] text-slate-dim">No data</span>
+                <span className="text-[9px] text-slate-dim sm:text-[10px]">—</span>
               )}
             </div>
           );

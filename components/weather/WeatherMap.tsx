@@ -25,6 +25,7 @@ export default function WeatherMap({
   snapshot
 }: Props) {
   return (
+    <div className="relative isolate h-[440px] w-full sm:h-[560px]">
     <MapContainer
       center={[
         location.latitude,
@@ -33,7 +34,7 @@ export default function WeatherMap({
       zoom={9}
       scrollWheelZoom
       zoomControl={false}
-      className="h-full min-h-[360px] w-full"
+      className="h-full w-full"
     >
 
       <TileLayer
@@ -76,5 +77,6 @@ export default function WeatherMap({
       </CircleMarker>
 
     </MapContainer>
+    </div>
   );
 }

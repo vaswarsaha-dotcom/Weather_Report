@@ -48,7 +48,7 @@ export default function MapsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-medium text-cloud">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-cloud">
           Weather maps
         </h1>
         <p className="text-sm text-slate">
@@ -66,7 +66,7 @@ export default function MapsPage() {
       )}
 
       {snapshot && (
-        <div className="min-h-[480px] overflow-hidden rounded-3xl border border-white/10 bg-black/10">
+        <div className="panel isolate overflow-hidden">
           <WeatherMap location={location} snapshot={snapshot} />
         </div>
       )}

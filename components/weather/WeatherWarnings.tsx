@@ -31,7 +31,7 @@ export function WeatherWarnings({
   }
 
   return (
-    <section className="rounded-3xl border border-amber/25 bg-amber/10 p-5 backdrop-blur-xl sm:p-6">
+    <section className="rounded-3xl border border-amber/25 bg-amber/10 p-5 shadow-glass backdrop-blur-xl sm:p-6">
 
       <div className="flex items-start gap-4">
 

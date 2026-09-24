@@ -47,15 +47,15 @@ export function HourlyTimeline({
       }));
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-glass backdrop-blur-xl sm:p-6">
+    <section className="panel panel-pad">
 
       <div className="mb-5">
 
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan">
+        <p className="eyebrow">
           Hourly
         </p>
 
-        <h2 className="mt-1 font-display text-2xl text-cloud">
+        <h2 className="panel-title">
           Next 24 hours
         </h2>
 
@@ -141,7 +141,7 @@ export function HourlyTimeline({
 
       </div>
 
-      <div className="mt-5 flex gap-3 overflow-x-auto pb-2">
+      <div className="mt-5 flex snap-x gap-3 overflow-x-auto pb-2">
 
         {snapshot.hourly
           .slice(0, 24)
@@ -155,7 +155,7 @@ export function HourlyTimeline({
             return (
               <div
                 key={point.time}
-                className="min-w-[70px] rounded-2xl bg-black/10 p-3 text-center"
+                className="tile min-w-[72px] shrink-0 snap-start p-3 text-center"
               >
 
                 <p className="text-[11px] text-slate">

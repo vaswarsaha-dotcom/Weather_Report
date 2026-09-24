@@ -55,8 +55,8 @@ export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySe
   }, []);
 
   return (
-    <div ref={boxRef} className="relative w-full max-w-md">
-      <div className="flex items-center gap-2 bg-ink border border-white/10 rounded-xl px-3.5 py-2.5 focus-within:border-amber transition-colors">
+    <div ref={boxRef} className="relative z-40 w-full sm:max-w-md">
+      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 shadow-glass backdrop-blur-xl transition focus-within:border-cyan/60 focus-within:bg-white/[0.1] focus-within:ring-4 focus-within:ring-cyan/10">
         <Search size={16} className="text-slate shrink-0" />
         <input
           value={query}
@@ -81,7 +81,7 @@ export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySe
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute z-20 mt-1.5 w-full bg-dusk2 border border-white/10 rounded-xl shadow-glass overflow-hidden">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-white/10 bg-[#141d36] shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
           {results.map((r) => {
             const label = [r.name, r.admin1, r.country]
               .filter(Boolean)
@@ -94,10 +94,10 @@ export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySe
                   setQuery(label);
                   setOpen(false);
                 }}
-                className="w-full text-left px-3.5 py-2.5 text-sm text-cloud hover:bg-white/5 transition-colors flex items-center gap-2"
+                className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-cloud transition-colors hover:bg-white/[0.06]"
               >
                 <MapPin size={13} className="text-slate shrink-0" />
-                {label}
+                <span className="min-w-0 truncate">{label}</span>
               </button>
             );
           })}
