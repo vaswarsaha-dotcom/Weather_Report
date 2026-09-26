@@ -1,5 +1,6 @@
-// lib/auth.ts  (server-only)
+// lib/auth.ts
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 export type SessionUser = {
   id: string;
@@ -18,10 +19,37 @@ export class AuthError extends Error {
   }
 }
 
-/** Returns the logged-in Supabase user in the shape the app expects, or null. */
+const DEMO_COOKIE = "weathersphere-demo";
+
 export async function getSession(): Promise<SessionUser | null> {
+  /*
+   * Development-only demo session.
+   */
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.DEMO_LOGIN === "true"
+  ) {
+    const cookieStore = await cookies();
+    const demoEmail = cookieStore.get(DEMO_COOKIE)?.value;
+
+    if (demoEmail) {
+      return {
+        id: "demo-user",
+        email: decodeURIComponent(demoEmail),
+        name:
+          decodeURIComponent(demoEmail).split("@")[0] ||
+          "Demo User",
+        role: "user",
+      };
+    }
+  }
+
+  /*
+   * Normal Supabase session.
+   */
   try {
     const supabase = await createClient();
+
     const {
       data: { user },
       error,
@@ -36,24 +64,32 @@ export async function getSession(): Promise<SessionUser | null> {
         (user.user_metadata?.name as string | undefined) ||
         user.email?.split("@")[0] ||
         "User",
-      // app_metadata can only be changed server-side, so it is safe for roles
-      role: user.app_metadata?.role === "admin" ? "admin" : "user",
+      role:
+        user.app_metadata?.role === "admin"
+          ? "admin"
+          : "user",
     };
   } catch {
     return null;
   }
 }
 
-/** Throws AuthError(401) when nobody is logged in. */
 export async function requireSession(): Promise<SessionUser> {
   const user = await getSession();
-  if (!user) throw new AuthError("Unauthorized", 401);
+
+  if (!user) {
+    throw new AuthError("Unauthorized", 401);
+  }
+
   return user;
 }
 
-/** Throws AuthError(401) or AuthError(403) unless the user is an admin. */
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireSession();
-  if (user.role !== "admin") throw new AuthError("Forbidden", 403);
+
+  if (user.role !== "admin") {
+    throw new AuthError("Forbidden", 403);
+  }
+
   return user;
 }

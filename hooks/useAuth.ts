@@ -1,61 +1,229 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import type { PublicUser } from "@/types/user";
+
+interface AuthState {
+  user: PublicUser | null;
+  loading: boolean;
+  error: string | null;
+}
 
 export function useAuth() {
-  const [supabase] = useState(() => createClient());
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] =
+    useState<AuthState>({
+      user: null,
+      loading: true,
+      error: null,
+    });
 
-  // Load the current session, then keep it in sync
+  /* ---------------------------------------------------------- */
+  /* Check current session                                      */
+  /* ---------------------------------------------------------- */
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "/api/auth/me",
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        setState({
+          user: null,
+          loading: false,
+          error: null,
+        });
+
+        return;
+      }
+
+      const data =
+        await response.json();
+
+      setState({
+        user: data.user ?? null,
+        loading: false,
+        error: null,
+      });
+    } catch {
+      setState({
+        user: null,
+        loading: false,
+        error: "Couldn't reach the server.",
+      });
+    }
+  }, []);
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
-      setLoading(false);
-    });
+    refresh();
+  }, [refresh]);
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => sub.subscription.unsubscribe();
-  }, [supabase]);
+  /* ---------------------------------------------------------- */
+  /* LOGIN                                                     */
+  /* ---------------------------------------------------------- */
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
+    async (
+      email: string,
+      password: string
+    ) => {
+      const response =
+        await fetch(
+          "/api/auth/login",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            credentials: "include",
+
+            body: JSON.stringify({
+              email:
+                email.trim().toLowerCase(),
+              password,
+            }),
+          }
+        );
+
+      const data =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          data.error ||
+          "Invalid email or password.";
+
+        setState((current) => ({
+          ...current,
+          error: message,
+        }));
+
+        throw new Error(message);
+      }
+
+      setState({
+        user: data.user,
+        loading: false,
+        error: null,
       });
-      if (error) throw new Error(error.message);
-      setUser(data.user);
-      return data.user;
+
+      return data.user as PublicUser;
     },
-    [supabase]
+    []
   );
+
+  /* ---------------------------------------------------------- */
+  /* SIGNUP                                                    */
+  /* ---------------------------------------------------------- */
 
   const signup = useCallback(
-    async (email: string, password: string) => {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-      if (error) throw new Error(error.message);
-      if (!data.session) {
-        throw new Error("Account created. Check your email to confirm it, then sign in.");
+    async (
+      email: string,
+      password: string,
+      name: string
+    ) => {
+      const response =
+        await fetch(
+          "/api/auth/signup",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            credentials: "include",
+
+            body: JSON.stringify({
+              email:
+                email.trim().toLowerCase(),
+              password,
+              name: name.trim(),
+            }),
+          }
+        );
+
+      const data =
+        await response
+          .json()
+          .catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          data.error ||
+          "Unable to create account.";
+
+        setState((current) => ({
+          ...current,
+          error: message,
+        }));
+
+        throw new Error(message);
       }
-      setUser(data.user);
-      return data.user;
+
+      /*
+       * If Supabase email confirmation is enabled,
+       * there may not be a logged-in session yet.
+       */
+      if (data.user) {
+        setState({
+          user: data.user,
+          loading: false,
+          error: null,
+        });
+      }
+
+      return data;
     },
-    [supabase]
+    []
   );
 
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  }, [supabase]);
+  /* ---------------------------------------------------------- */
+  /* LOGOUT                                                    */
+  /* ---------------------------------------------------------- */
 
-  return { user, loading, login, signup, logout };
+  const logout = useCallback(async () => {
+    try {
+      await fetch(
+        "/api/auth/logout",
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+    } finally {
+      setState({
+        user: null,
+        loading: false,
+        error: null,
+      });
+    }
+  }, []);
+
+  return {
+    user: state.user,
+    loading: state.loading,
+    error: state.error,
+
+    login,
+    signup,
+    logout,
+    refresh,
+  };
 }

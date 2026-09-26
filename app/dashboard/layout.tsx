@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CloudSun } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 
@@ -81,12 +82,12 @@ export default async function DashboardLayout({
               sm:text-base
             "
           >
-            <span className="hidden sm:inline">
-              {process.env.NEXT_PUBLIC_APP_NAME || "WeatherSphere Pro"}
-            </span>
-
-            <span className="sm:hidden">
-              WeatherSphere
+            <span className="flex items-center gap-2">
+              <CloudSun className="h-5 w-5 shrink-0 text-amber sm:h-6 sm:w-6" aria-hidden="true" />
+              <span className="hidden sm:inline">
+                {process.env.NEXT_PUBLIC_APP_NAME || "WeatherSphere Pro"}
+              </span>
+              <span className="sm:hidden">WeatherSphere</span>
             </span>
           </Link>
 
@@ -160,7 +161,7 @@ export default async function DashboardLayout({
                 right-0
                 top-[calc(100%+8px)]
                 z-[100]
-                w-52
+                w-[min(13rem,calc(100vw-1.5rem))]
                 overflow-hidden
                 rounded-2xl
                 border
@@ -300,7 +301,7 @@ export default async function DashboardLayout({
                   right-0
                   top-[calc(100%+8px)]
                   z-[100]
-                  w-52
+                  w-[min(13rem,calc(100vw-1.5rem))]
                   overflow-hidden
                   rounded-2xl
                   border

@@ -66,20 +66,24 @@ export default function AlertsPanel({ lat, lon, placeName }: { lat: number | nul
   return (
     <GlassCard>
       <h3 className="font-display text-sm font-semibold uppercase tracking-wider text-slate mb-4">Smart alerts</h3>
-      <div className="flex flex-wrap gap-2 items-end mb-5 pb-5 border-b border-white/10">
+      <div className="mb-5 grid grid-cols-2 items-end gap-3 border-b border-white/10 pb-5 sm:flex sm:flex-wrap sm:gap-2">
+        <div className="col-span-2 sm:col-auto">
         <Input label="Name" placeholder="e.g. Heat warning" value={form.label}
-          onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} className="w-40" />
-        <div className="flex flex-col gap-1.5">
+          onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} className="w-full sm:w-40" />
+        </div>
+        <div className="col-span-2 flex flex-col gap-1.5 sm:col-auto">
           <label className="text-xs font-medium text-slate">Condition</label>
           <select value={form.condition}
             onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value as AlertCondition }))}
-            className="bg-ink border border-white/10 rounded-xl px-3 py-2.5 text-sm text-cloud outline-none focus:border-amber">
+            className="w-full bg-ink border border-white/10 rounded-xl px-3 py-2.5 text-sm text-cloud outline-none focus:border-amber sm:w-auto">
             {ALERT_CONDITIONS.map((c) => <option key={c} value={c}>{CONDITION_LABELS[c]}</option>)}
           </select>
         </div>
+        <div>
         <Input label="Threshold" type="number" value={form.threshold}
-          onChange={(e) => setForm((f) => ({ ...f, threshold: parseFloat(e.target.value) || 0 }))} className="w-24" />
-        <Button onClick={createAlert} loading={saving} size="md"><Plus size={14} /> Add</Button>
+          onChange={(e) => setForm((f) => ({ ...f, threshold: parseFloat(e.target.value) || 0 }))} className="w-full sm:w-24" />
+        </div>
+        <Button onClick={createAlert} loading={saving} size="md" className="h-[42px] w-full sm:w-auto"><Plus size={14} /> Add</Button>
       </div>
       {error && <p className="text-xs text-red-400 -mt-3 mb-3">{error}</p>}
       {loading ? (
@@ -92,9 +96,9 @@ export default function AlertsPanel({ lat, lon, placeName }: { lat: number | nul
             <div key={a.id} className="flex items-center justify-between bg-ink/60 rounded-xl px-4 py-3">
               <div>
                 <div className="text-sm text-cloud">{a.label}</div>
-                <div className="text-xs text-slate mt-0.5">{CONDITION_LABELS[a.condition]} {a.threshold} · {a.place_name}</div>
+                <div className="text-xs text-slate mt-0.5 break-words">{CONDITION_LABELS[a.condition]} {a.threshold} · {a.place_name}</div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 <button onClick={() => toggleActive(a)}
                   className={`text-xs px-2.5 py-1 rounded-full border ${a.active ? "border-amber/40 text-amber" : "border-white/10 text-slate-dim"}`}>
                   {a.active ? "Active" : "Paused"}

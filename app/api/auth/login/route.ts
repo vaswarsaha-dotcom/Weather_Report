@@ -1,53 +1,109 @@
-// app/api/auth/login/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ) {
-      return NextResponse.json(
-        { error: "Supabase env vars missing. Check .env.local and restart the dev server." },
-        { status: 500 }
-      );
-    }
+    const body = await request.json();
 
-    const body = await req.json().catch(() => null);
-    const email = String(body?.email ?? "").trim().toLowerCase();
+    const email = String(body?.email ?? "")
+      .trim()
+      .toLowerCase();
+
+    // Password is intentionally NOT modified.
     const password = String(body?.password ?? "");
 
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email is required." },
         { status: 400 }
       );
     }
 
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      // e.g. "Invalid login credentials" or "Email not confirmed"
-      return NextResponse.json({ error: error.message }, { status: 401 });
+    if (!password) {
+      return NextResponse.json(
+        { error: "Password is required." },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({
-      user: {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name ?? null,
-      },
-    });
-  } catch (err) {
-    console.error("[login] crashed:", err);
+    /*
+     * DEVELOPMENT DEMO LOGIN
+     *
+     * Enable with:
+     * NEXT_PUBLIC_DEMO_LOGIN=true
+     *
+     * This allows arbitrary credentials ONLY during development.
+     */
+    if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.DEMO_LOGIN === "true"
+    ) {
+      return NextResponse.json(
+        {
+          user: {
+            id: "demo-user",
+            email,
+            name: email.split("@")[0] || "Demo User",
+            role: "user",
+          },
+          demo: true,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Normal Supabase authentication.
+    const supabase = await createClient();
+
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (error) {
+      console.error("SUPABASE LOGIN ERROR:", {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+      });
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      );
+    }
+
+    if (!data.user) {
+      return NextResponse.json(
+        { error: "Unable to sign in." },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Server error" },
+      {
+        user: {
+          id: data.user.id,
+          email: data.user.email ?? email,
+          name:
+            (data.user.user_metadata?.name as string) ||
+            data.user.email?.split("@")[0] ||
+            "User",
+          role:
+            data.user.app_metadata?.role === "admin"
+              ? "admin"
+              : "user",
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("LOGIN SERVER ERROR:", error);
+
+    return NextResponse.json(
+      { error: "Something went wrong while signing in." },
       { status: 500 }
     );
   }
-}   
+}

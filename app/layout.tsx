@@ -1,5 +1,5 @@
 // app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 // @ts-ignore
 import "./globals.css";
@@ -11,6 +11,13 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_APP_NAME || "WeatherSphere Pro",
   description: "White-label weather intelligence — live forecasts, alerts, and an embeddable widget.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0D1321",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

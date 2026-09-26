@@ -584,7 +584,7 @@ export default function HistoryChart({
       ====================================================== */}
       <div className="px-2 pb-3 pt-4 sm:px-4">
         {loading ? (
-          <div className="flex h-[430px] items-center justify-center">
+          <div className="flex h-[320px] sm:h-[430px] items-center justify-center">
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <RefreshCw
                 size={15}
@@ -595,7 +595,7 @@ export default function HistoryChart({
             </div>
           </div>
         ) : error ? (
-          <div className="flex h-[430px] flex-col items-center justify-center px-6 text-center">
+          <div className="flex h-[320px] sm:h-[430px] flex-col items-center justify-center px-6 text-center">
             <div className="text-sm font-medium text-red-300">
               Could not load history
             </div>
@@ -613,7 +613,7 @@ export default function HistoryChart({
             </button>
           </div>
         ) : chartData.length < 2 ? (
-          <div className="flex h-[430px] flex-col items-center justify-center px-6 text-center">
+          <div className="flex h-[320px] sm:h-[430px] flex-col items-center justify-center px-6 text-center">
             <Activity
               size={28}
               className="mb-3 text-emerald-400/50"
@@ -630,7 +630,7 @@ export default function HistoryChart({
             </div>
           </div>
         ) : (
-          <div className="h-[430px] w-full">
+          <div className="h-[320px] sm:h-[430px] w-full">
             <ResponsiveContainer
               width="100%"
               height="100%"

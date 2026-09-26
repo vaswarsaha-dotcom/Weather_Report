@@ -66,7 +66,7 @@ export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySe
           }}
           onFocus={() => setOpen(true)}
           placeholder="Search a city…"
-          className="bg-transparent outline-none text-sm text-cloud placeholder:text-slate-dim flex-1 min-w-0"
+          className="bg-transparent outline-none text-base sm:text-sm text-cloud placeholder:text-slate-dim flex-1 min-w-0"
         />
         {searching && <Loader2 size={14} className="animate-spin text-slate shrink-0" />}
         <button
@@ -74,7 +74,7 @@ export function CitySearch({ onSelect, onUseLocation, locating = false }: CitySe
           onClick={() => onUseLocation?.()}
           disabled={locating}
           title="Use current location"
-          className="shrink-0 text-slate hover:text-amber transition-colors disabled:opacity-50"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate transition-colors hover:bg-white/10 hover:text-amber disabled:opacity-50"
         >
           {locating ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
         </button>
