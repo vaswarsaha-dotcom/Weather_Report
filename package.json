@@ -21,7 +21,7 @@
     "leaflet": "1.9.4",
     "lucide-react": "^0.454.0",
     "mongoose": "8.7.3",
-    "next": "15.1.6",
+    "next": "^15.5.26",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "7.53.1",
